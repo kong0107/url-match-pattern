@@ -11,4 +11,9 @@ scheme          | this project | Firefox 55+ | Chrome 91+ | Edge, Opera | Safari
 `ws`, `wss`     | Yes          | Yes         | No         | No          | No
 `urn`           | No           | No          | Yes        | No          | No
 `data`          | No           | partial     | No         | No          | No
-`file`          | Yes          | Yes         | Yes        | Yes         | No
+`file`          | partial      | Yes         | Yes        | Yes         | No
+
+## Defects of URL Match Pattern
+
+* not well-defined
+* no escaping way for `*` in path

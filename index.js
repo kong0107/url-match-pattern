@@ -1,46 +1,84 @@
+'use strict';
 class URLMatchPattern {
+    static #resAllSchemes = 'https?|wss?|ftp|file';
+    static #resDomainLabel = '[0-9A-Za-z]+(?:\\-+[0-9A-Za-z]+)*';
+    static #resDomainName = `${URLMatchPattern.#resDomainLabel}(?:\\.(?:${URLMatchPattern.#resDomainLabel}))*`;
+    static #reoMatchPattern = new RegExp(`^(\\*|${URLMatchPattern.#resAllSchemes}):\\/\\/(\\*|(?:\\*\\.)?${URLMatchPattern.#resDomainName})(\\/.*)$`);
+
+    static test(pattern, url = '') {
+        switch(arguments.length) {
+            case 1:
+                if(pattern instanceof URLMatchPattern) return true;
+                return pattern === '<all_urls>' || URLMatchPattern.#reoMatchPattern.test(pattern.toString());
+            case 2:
+                if(!(pattern instanceof URLMatchPattern))
+                    pattern = new URLMatchPattern(pattern.toString());
+                return pattern.test(url.toString());
+            default:
+                throw new TypeError('URLMatchPattern.test requires 1 or 2 arguments');
+        }
+    }
+
     #isAllUrls = false;
     #scheme;
     #host;
     #path;
+    #regExp;
+
+    XtoRegExp() {
+        const resPort = '\\:\\d{1,5}';
+        let re = '^';
+
+        if(this.#isAllUrls) re += `(${URLMatchPattern.#resAllSchemes})`;
+        else if(this.#scheme == '*') re += '(https?)';
+        else re += `(${this.#scheme})`;
+
+        re += ':\\/\\/';
+
+        if(this.#isAllUrls) re += `(?:(${URLMatchPattern.#resDomainName})(?:${resPort})?)?`; // for file:///path
+        else {
+            if(this.#host == '*') re += `(${URLMatchPattern.#resDomainName})`;
+            else {
+                let host = this.#host;
+                let subRE = '';
+                if(this.#host.startsWith('*.')) {
+                    host = this.#host.substr(2);
+                    subRE = `(?:${URLMatchPattern.#resDomainName}\\.)?`;
+                }
+                subRE += host.replace(/[\.\-]/g, '\\$&');
+                re += `(${subRE})`;
+            }
+            re += `(?:${resPort})?`;
+        }
+
+        const subRE = this.#path
+            .replace(/[.+?^${}()|[\]\\\/]/g, '\\$&')
+            .replace(/\*/g, '.*');
+        re += `(${subRE})`;
+
+        re += '(?:#|$)';
+        return new RegExp(re);
+    }
 
     constructor(pattern, host = null, path = null) {
-        switch(arguments.length) {
-            case 1:
-                switch(typeof pattern) {
-                    case "string":
-                        if(pattern === "<all_urls>") {
-                            this.#isAllUrls = true;
-                            this.#scheme = "*";
-                            this.#host = "*";
-                            this.#path = "/*";
-                            break;
-                        }
-                        const match = /^(\*|https?|wss?|file|ftp):\/\/(\*|((\*\.)?([0-9A-Za-z]+(\-+[0-9A-Za-z]+)*\.)*[a-z]{2,}))(\/.*)$/.exec(pattern);
-                        if(!match) throw new SyntaxError("Invalid URL match pattern: " + pattern);
-                        this.#scheme = match[1];
-                        this.#host = match[2];
-                        this.#path = match[match.length - 1];
-                        break;
-                    case "object":
-                        this.#scheme = pattern.scheme;
-                        this.#host = pattern.host;
-                        this.#path = pattern.path;
-                        break;
-                    default:
-                        throw new TypeError("URLMatchPattern requires string or object");
-                }
-                break;
-            case 3:
-                this.#scheme = pattern;
-                this.#host = host;
-                this.#path = path;
-                break;
-            default:
-                throw new TypeError("URLMatchPattern requires 1 or 3 arguments");
+        if(pattern === '<all_urls>') {
+            this.#isAllUrls = true;
+            pattern = '*://*/*';
         }
-        if(!["*", "http", "https", "file", "ftp"].includes(this.#scheme)) throw new SyntaxError("Invalid URL scheme: " + this.#scheme);
-        if(!this.#path.startsWith("/")) throw new SyntaxError("Invalid URL path: " + this.#path);
+        else if(typeof pattern === 'object')
+            pattern = `${pattern.scheme}://${pattern.host}${pattern.path}`;
+        else if(arguments.length === 3)
+            pattern = `${pattern}://${host}${path}`;
+        else if(arguments.length != 1)
+            throw new TypeError('URLMatchPattern requires 1 or 3 arguments');
+
+        const match = URLMatchPattern.#reoMatchPattern.exec(pattern);
+        if(!match) throw new SyntaxError('Invalid URL match pattern: ' + pattern);
+        this.#scheme = match[1];
+        this.#host = match[2];
+        this.#path = match[3];
+
+        this.#regExp = this.XtoRegExp();
     }
 
     get scheme() { return this.#scheme; }
@@ -59,46 +97,14 @@ class URLMatchPattern {
         return this.pattern;
     }
 
-    toRegExp(flags) {
-        const reAllSchemes = 'https?|wss?|ftp|file';
-        const reDomainLabel = '[0-9A-Za-z]+(?:\\-+[0-9A-Za-z]+)*';
-        const reDomainName = `${reDomainLabel}(?:\\.(?:${reDomainLabel}))*`;
-        const rePort = '\\:\\d{1,5}';
-
-        let re = '^';
-
-        if(this.#isAllUrls) re += `(${reAllSchemes})`;
-        else if(this.#scheme == '*') re += '(https?)';
-        else re += `(${this.#scheme})`;
-
-        re += ':\\/\\/';
-
-        if(this.#isAllUrls) re += `(?:(${reDomainName})(?:${rePort})?)?`; // for file:///path
-        else {
-            if(this.#host == '*') re += `(${reDomainName})`;
-            else {
-                let host = this.#host;
-                let subRE = '';
-                if(this.#host.startsWith('*.')) {
-                    host = this.#host.substr(2);
-                    subRE = `(?:${reDomainName}\\.)?`;
-                }
-                subRE += host.replace(/[\.\-]/g, '\\$&');
-                re += `(${subRE})`;
-            }
-            re += `(?:${rePort})?`;
-        }
-
-        const subRE = this.#path
-            .replace(/[.+?^${}()|[\]\\\/]/g, '\\$&')
-            .replace(/\*/g, '.*');
-        re += `(${subRE})`;
-
-        re += '$';
-        return new RegExp(re, flags);
+    toRegExp(flags = '') {
+        return new RegExp(this.#regExp, flags);
     }
 
+    test(url) {
+        return this.#regExp.test(url);
+    }
 }
 
-if(typeof module != "undefined" && module.exports)
+if(typeof module != 'undefined' && module.exports)
     module.exports = URLMatchPattern;

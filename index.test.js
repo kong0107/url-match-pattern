@@ -31,13 +31,47 @@ describe('construction exception', () => {
         expect(() => new URLMatchPattern)
         .toThrow(TypeError);
     });
-    test('wrong argument length: 2', () => {
-        expect(() => new URLMatchPattern('<all_urls>', undefined))
-        .toThrow(TypeError);
-    });
-    test('wrong argument object', () => {
-        expect(() => new URLMatchPattern({scheme: 'https', host: 'xxx.xx'}))
-        .toThrow(TypeError);
-    });
 });
 
+describe('main', () => {
+    test('static test a valid pattern: "<all_urls>"', () => {
+        expect(URLMatchPattern.test('<all_urls>'))
+        .toBe(true);
+    });
+    test('static test a valid pattern: "*://localhost/foo*"', () => {
+        expect(URLMatchPattern.test('*://localhost/foo*'))
+        .toBe(true);
+    });
+    test('static test a valid pattern: "ftp://*.edu/post/ad?=*"', () => {
+        expect(URLMatchPattern.test('ftp://*.edu/post/ad?=*'))
+        .toBe(true);
+    });
+    test('static test a valid pattern: "ws://99.88.77.66/*/abc"', () => {
+        expect(URLMatchPattern.test('ws://99.88.77.66/*/abc'))
+        .toBe(true);
+    });
+    // test('static test a valid pattern: "file:///blah/*"', () => {
+    //     expect(URLMatchPattern.test('file:///blah/*'))
+    //     .toBe(true);
+    // });
+    test('static test an invalid pattern: "https://www.google.com"', () => {
+        expect(URLMatchPattern.test('https://www.google.com'))
+        .toBe(false);
+    });
+    test('static test an invalid pattern: "https://mozilla.*.org/"', () => {
+        expect(URLMatchPattern.test('https://mozilla.*.org/'))
+        .toBe(false);
+    });
+    test('static test an invalid pattern: "https://mozilla.org:80/"', () => {
+        expect(URLMatchPattern.test('https://mozilla.org:80/'))
+        .toBe(false);
+    });
+    test('static test an invalid pattern: "file://*"', () => {
+        expect(URLMatchPattern.test('file://*'))
+        .toBe(false);
+    });
+    test('static test an invalid pattern: "*://*"', () => {
+        expect(URLMatchPattern.test('*://*'))
+        .toBe(false);
+    });
+});
