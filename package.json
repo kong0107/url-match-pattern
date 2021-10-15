@@ -1,6 +1,6 @@
 {
   "name": "url-match-pattern",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "handle match patterns described in browser extension",
   "main": "index.js",
   "scripts": {

@@ -1,22 +1,49 @@
-'use strict';
 class URLMatchPattern {
-    static #resAllSchemes = 'https?|wss?|ftp|file';
+    static #resScheme = 'https?|wss?|ftp|file';
     static #resDomainLabel = '[0-9A-Za-z]+(?:\\-+[0-9A-Za-z]+)*';
-    static #resDomainName = `${URLMatchPattern.#resDomainLabel}(?:\\.(?:${URLMatchPattern.#resDomainLabel}))*`;
-    static #reoMatchPattern = new RegExp(`^(\\*|${URLMatchPattern.#resAllSchemes}):\\/\\/(\\*|(?:\\*\\.)?${URLMatchPattern.#resDomainName})(\\/.*)$`);
+    static #resMatchPattern =
+        '^<all_urls>$|^(?:(?:file://|(?:(\\*|<scheme>)://(<host>)))(<path>))$'
+        .replace('<scheme>', URLMatchPattern.#resScheme)
+        .replace('<host>', '\\*|(?:\\*\\.)?<label>(?:\\.<label>)*'
+            .replace(/<label>/g, URLMatchPattern.#resDomainLabel)
+        )
+        .replace('<path>', '/.*')
+    ;
+    static #reoMatchPattern = new RegExp(URLMatchPattern.#resMatchPattern);
 
     static test(pattern, url = '') {
         switch(arguments.length) {
             case 1:
                 if(pattern instanceof URLMatchPattern) return true;
-                return pattern === '<all_urls>' || URLMatchPattern.#reoMatchPattern.test(pattern.toString());
+                try {
+                    new URLMatchPattern(pattern);
+                    return true;
+                }
+                catch(e) {
+                    return false;
+                }
             case 2:
                 if(!(pattern instanceof URLMatchPattern))
-                    pattern = new URLMatchPattern(pattern.toString());
-                return pattern.test(url.toString());
+                    pattern = new URLMatchPattern(pattern);
+                if(!(url instanceof URL)) {
+                    try {
+                        url = new URL(url);
+                    }
+                    catch(err) {
+                        // console.warn(err);
+                        return false;
+                    }
+                }
+                url = `${url.protocol}//${url.hostname}${url.pathname}${url.search}`;
+                return pattern.test(url);
             default:
                 throw new TypeError('URLMatchPattern.test requires 1 or 2 arguments');
         }
+    }
+
+    static toRegExp(pattern, flags) {
+        pattern = new URLMatchPattern(pattern);
+        return pattern.toRegExp(flags);
     }
 
     #isAllUrls = false;
@@ -26,75 +53,69 @@ class URLMatchPattern {
     #regExp;
 
     XtoRegExp() {
-        const resPort = '\\:\\d{1,5}';
-        let re = '^';
+        let res = '^';
+        if(this.#isAllUrls) res += `(file://|(<scheme>)://<host>)`;
+        else if(this.#scheme === '*') res += 'https?://<host>';
+        else res += this.#scheme + '://<host>';
+        res += '<path>$';
 
-        if(this.#isAllUrls) re += `(${URLMatchPattern.#resAllSchemes})`;
-        else if(this.#scheme == '*') re += '(https?)';
-        else re += `(${this.#scheme})`;
+        res = res.replace('<scheme>', URLMatchPattern.#resScheme);
 
-        re += ':\\/\\/';
-
-        if(this.#isAllUrls) re += `(?:(${URLMatchPattern.#resDomainName})(?:${resPort})?)?`; // for file:///path
-        else {
-            if(this.#host == '*') re += `(${URLMatchPattern.#resDomainName})`;
+        let host = '';
+        if(this.#host) {
+            if(this.#host === '*') host = '(<label>\\.)*<label>';
             else {
-                let host = this.#host;
-                let subRE = '';
+                let subHost = this.#host;
                 if(this.#host.startsWith('*.')) {
-                    host = this.#host.substr(2);
-                    subRE = `(?:${URLMatchPattern.#resDomainName}\\.)?`;
+                    host = '(<label>\\.)*';
+                    subHost = this.#host.substr(2);
                 }
-                subRE += host.replace(/[\.\-]/g, '\\$&');
-                re += `(${subRE})`;
+                host += subHost.replace(/[\.\-]/g, '\\$&');
             }
-            re += `(?:${resPort})?`;
+            host = host.replace(/<label>/g, URLMatchPattern.#resDomainLabel);
         }
+        res = res.replace('<host>', host);
 
-        const subRE = this.#path
+        res = res.replace('<path>', this.#path
             .replace(/[.+?^${}()|[\]\\\/]/g, '\\$&')
-            .replace(/\*/g, '.*');
-        re += `(${subRE})`;
+            .replace(/\*/g, '.*')
+        );
 
-        re += '(?:#|$)';
-        return new RegExp(re);
+        return new RegExp(res);
     }
 
-    constructor(pattern, host = null, path = null) {
+    constructor(pattern) {
+        if(arguments.length != 1)
+            throw new TypeError('URLMatchPattern requires exact 1 argument');
+
         if(pattern === '<all_urls>') {
             this.#isAllUrls = true;
             pattern = '*://*/*';
         }
-        else if(typeof pattern === 'object')
-            pattern = `${pattern.scheme}://${pattern.host}${pattern.path}`;
-        else if(arguments.length === 3)
-            pattern = `${pattern}://${host}${path}`;
-        else if(arguments.length != 1)
-            throw new TypeError('URLMatchPattern requires 1 or 3 arguments');
+        else if(typeof pattern !== 'string')
+            pattern = pattern.toString();
 
         const match = URLMatchPattern.#reoMatchPattern.exec(pattern);
         if(!match) throw new SyntaxError('Invalid URL match pattern: ' + pattern);
-        this.#scheme = match[1];
-        this.#host = match[2];
+        this.#scheme = match[1] || 'file';
+        this.#host = match[2] || '';
         this.#path = match[3];
+
+        if(this.#scheme !== 'file' && !this.#host)
+            throw new SyntaxError('Invalid URL match pattern: ' + pattern);
 
         this.#regExp = this.XtoRegExp();
     }
 
-    get scheme() { return this.#scheme; }
-    get host() { return this.#host; }
-    get path() { return this .#path; }
-    get pattern() {
-        if(this.#isAllUrls) return '<all_urls>';
-        return this.#scheme + '://' + this.#host + this.#path;
-    }
-
     valueOf() {
+        if(this.#isAllUrls) return '<all_urls>';
+        if(!this.#host) return {scheme: this.#scheme, path: this.#path};
         return {scheme: this.#scheme, host: this.#host, path: this.#path};
     }
 
     toString() {
-        return this.pattern;
+        if(this.#isAllUrls) return '<all_urls>';
+        return this.#scheme + '://' + this.#host + this.#path;
     }
 
     toRegExp(flags = '') {
