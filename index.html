@@ -1,54 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Match Pattern</title>
-    <script src="./index.js"></script>
-    <style type="text/css">
-        ol {
-            margin: 0;
-            padding: 0;
-        }
-    </style>
-    <script>
-        const d = document;
-        const qs = d.querySelector.bind(d);
-        const qsa = d.querySelectorAll.bind(d);
-        document.addEventListener("DOMContentLoaded", () => {
-            /// remove text nodes between list items
-            qsa("ol, ul").forEach(list => {
-                Array.from(list.childNodes).forEach(child => {
-                    if(child.nodeType !== Node.ELEMENT_NODE) child.remove();
-                });
-            });
-            qs("#patternList").childNodes.forEach((item, index) => {
-                if(item.nodeType != 1) return;
-                item.style.marginLeft = (index + 1) + "em";
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URL Match Pattern</title>
+<script src="./index.js"></script>
+<style type="text/css">
+    section {
+        margin: 0 0 2em 2em;
+    }
+    ol {
+        margin: 0;
+        padding: 0;
+        list-style-type: none;
+    }
+    button {
+        display: inline-block;
+        font-size: inherit;
+    }
+    .btn-delete::before {
+        content: "× ";
+    }
+    section > button::before {
+        content: "+ ";
+    }
 
-            });
+
+    ol li:only-child button {
+        display: none;
+    }
+    li > * {
+        display: inline-block;
+    }
+    li > span {
+        width: 1em;
+        text-align: center;
+    }
+    li > input {
+        width: calc(100% - 10em);
+    }
+    li > button {
+        width: 6em;
+    }
+
+    #urlListContainer > button {
+        margin-left: 1em;
+    }
+</style>
+<script>
+    const d = document;
+    const qs = d.querySelector.bind(d);
+    const qsa = d.querySelectorAll.bind(d);
+
+    function addItemByList(listID, inputText) {
+        const item = qs("template#item").content.firstElementChild.cloneNode(true);
+        item.querySelector("button").addEventListener("click", deleteItemByEvent);
+        if(typeof inputText === "string") item.querySelector("input").value = inputText;
+        qs("#" + listID).append(item);
+    }
+
+    function deleteItemByEvent(event) {
+        let target = event.target;
+        while(target.tagName !== "LI") target = target.parentNode;
+        target.remove();
+        setPosition();
+    }
+
+    function setPosition() {
+        const patternList = qs("#patternList");
+        patternList.childNodes.forEach((item, index) => {
+            item.style.marginLeft = index + "em";
         });
-    </script>
+
+        const offset = patternList.childElementCount;
+        qs(".btn-add-pattern").style.marginLeft = (offset + 0) + "em";
+        qs("#urlListContainer").style.marginLeft = (offset + 2) + "em";
+    }
+
+    const commands = {
+        "add-pattern": text => {
+            addItemByList("patternList", text);
+            setPosition();
+        },
+        "add-url": text => addItemByList("urlList", text)
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+        for(const cmd in commands) {
+            qsa(`.btn-${cmd}`).forEach(btn => {
+                btn.addEventListener("click", commands[cmd]);
+            });
+        }
+
+        addItemByList("patternList", "<all_urls>");
+        addItemByList("urlList", "https://google.com/");
+
+    });
+</script>
+<template id="item">
+    <li>
+        <span>?</span>
+        <input>
+        <button class="btn-delete">delete</button>
+    </li>
+</template>
 </head>
 <body>
-    <h1>URL Match Pattern</h1>
-    <ol id="patternList">
-        <li><input></li>
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-    </ol>
-    <table>
-        <thead></thead>
-        <tbody></tbody>
-    </table>
-    <ol id="urlList">
-        <li></li>
-        <li></li>
-        <li></li>
-        <li></li>
-    </ol>
+<h1>URL Match Pattern</h1>
+<section id="patternListContainer">
+    <ol id="patternList"></ol>
+    <button class="btn-add-pattern">add pattern</button>
+</section>
+<table>
+    <thead></thead>
+    <tbody></tbody>
+</table>
+<section id="urlListContainer">
+    <ol id="urlList"></ol>
+    <button class="btn-add-url">add url</button>
+</section>
 </body>
 </html>
