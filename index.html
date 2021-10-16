@@ -1,124 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>URL Match Pattern</title>
-<script src="./index.js"></script>
-<style type="text/css">
-    section {
-        margin: 0 0 2em 2em;
-    }
-    ol {
-        margin: 0;
-        padding: 0;
-        list-style-type: none;
-    }
-    button {
-        display: inline-block;
-        font-size: inherit;
-    }
-    .btn-delete::before {
-        content: "× ";
-    }
-    section > button::before {
-        content: "+ ";
-    }
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL Match Pattern</title>
+    <script src="./index.js"></script>
+    <style type="text/css">
+        dt {
+            float: left;
+            width: 3.5em;
+        }
+        dt::after {
+            content: ":";
+        }
+        dd {
+            margin-left: 4em;
+            min-height: 1.5em;
+        }
+        dd input {
+            width: calc(100vw - 10em);
+        }
+        #pattern-analysis {
+            white-space: pre;
+            font-family: monospace;
+        }
+        dl::after {
+            content: "";
+            clear: both;
+        }
+    </style>
+    <script>
+        const g = document.getElementById.bind(document);
+        function main() {
+            let pattern;
+            try {
+                pattern = new URLMatchPattern(g("pattern").value);
+                g("pattern-analysis").textContent = "RegExp: " + pattern.toRegExp().toString();
+            }
+            catch(e) { g("pattern-analysis").textContent = "invalid pattern"; }
 
-
-    ol li:only-child button {
-        display: none;
-    }
-    li > * {
-        display: inline-block;
-    }
-    li > span {
-        width: 1em;
-        text-align: center;
-    }
-    li > input {
-        width: calc(100% - 10em);
-    }
-    li > button {
-        width: 6em;
-    }
-
-    #urlListContainer > button {
-        margin-left: 1em;
-    }
-</style>
-<script>
-    const d = document;
-    const qs = d.querySelector.bind(d);
-    const qsa = d.querySelectorAll.bind(d);
-
-    function addItemByList(listID, inputText) {
-        const item = qs("template#item").content.firstElementChild.cloneNode(true);
-        item.querySelector("button").addEventListener("click", deleteItemByEvent);
-        if(typeof inputText === "string") item.querySelector("input").value = inputText;
-        qs("#" + listID).append(item);
-    }
-
-    function deleteItemByEvent(event) {
-        let target = event.target;
-        while(target.tagName !== "LI") target = target.parentNode;
-        target.remove();
-        setPosition();
-    }
-
-    function setPosition() {
-        const patternList = qs("#patternList");
-        patternList.childNodes.forEach((item, index) => {
-            item.style.marginLeft = index + "em";
-        });
-
-        const offset = patternList.childElementCount;
-        qs(".btn-add-pattern").style.marginLeft = (offset + 0) + "em";
-        qs("#urlListContainer").style.marginLeft = (offset + 2) + "em";
-    }
-
-    const commands = {
-        "add-pattern": text => {
-            addItemByList("patternList", text);
-            setPosition();
-        },
-        "add-url": text => addItemByList("urlList", text)
-    };
-
-    document.addEventListener("DOMContentLoaded", () => {
-        for(const cmd in commands) {
-            qsa(`.btn-${cmd}`).forEach(btn => {
-                btn.addEventListener("click", commands[cmd]);
-            });
+            try {
+                const url = new URL(g("url").value);
+                if(!pattern) return;
+                g("match-result").textContent = pattern.test(url) ? "matched" : "not matched";
+            }
+            catch(e) { g("match-result").textContent = "invalid url"; }
         }
 
-        addItemByList("patternList", "<all_urls>");
-        addItemByList("urlList", "https://google.com/");
-
-    });
-</script>
-<template id="item">
-    <li>
-        <span>?</span>
-        <input>
-        <button class="btn-delete">delete</button>
-    </li>
-</template>
+        document.addEventListener("DOMContentLoaded", () => {
+            main();
+            g("pattern").addEventListener("input", main);
+            g("url").addEventListener("input", main);
+        });
+    </script>
 </head>
 <body>
-<h1>URL Match Pattern</h1>
-<section id="patternListContainer">
-    <ol id="patternList"></ol>
-    <button class="btn-add-pattern">add pattern</button>
-</section>
-<table>
-    <thead></thead>
-    <tbody></tbody>
-</table>
-<section id="urlListContainer">
-    <ol id="urlList"></ol>
-    <button class="btn-add-url">add url</button>
-</section>
+    <h1>URL Match Pattern</h1>
+    <dl>
+        <dt>Pattern</dt>
+        <dd><input id="pattern" value="*://*.domain.name/foo*bar"></dd>
+        <dd><div id="pattern-analysis"></div></dd>
+    </dl>
+    <dl>
+        <dt>URL</dt>
+        <dd><input id="url" value="https://a.b.domain.name/foo?search=bar"></dd>
+        <dd><div id="match-result"></div></dd>
+    </dl>
 </body>
 </html>

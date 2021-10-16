@@ -2,6 +2,8 @@
 
 a JavaScript package handles match patterns described in browser extension
 
+[demo page](https://kong0107.github.io/url-match-pattern/)
+
 See articles on [MDN](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Match_patterns) and [Chrome Developers](https://developer.chrome.com/docs/extensions/mv3/match_patterns/).
 
 
@@ -26,20 +28,29 @@ pattern.test('https://domainB.name/'); // true
 ```
 
 
-### note
+### Note
+
+Method `test` (both static and instance) allows url string:
+* with port
+* with hash
+* without path
+
+However, that's not the case after converting to `RegExp`.
 
 ```javascript
-/// method `test` (both static and instance) allows url with port and hash
 URLMatchPattern.test('*://*/', 'http://username:password@abc:666/#hash=hash?a'); // true
+URLMatchPattern.test('*://*/', 'http://abc'); // true
 
 const pattern = new URLMatchPattern('*://*/');
 pattern.test('http://username:password@abc:666/#hash=hash?a'); // true
+pattern.test('http://abc'); // true
 
 /// converting to RegExp object would lose that compatibility for current version
 const regexp = URLMatchPattern.toRegExp('*://*/');
 regexp.test('http://abc/'); // true
 regexp.test('http://abc:80/'); // false
 regexp.test('http://abc/#foo'); // false
+regexp.test('http://abc'); // false
 ```
 
 

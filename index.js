@@ -25,16 +25,6 @@ class URLMatchPattern {
             case 2:
                 if(!(pattern instanceof URLMatchPattern))
                     pattern = new URLMatchPattern(pattern);
-                if(!(url instanceof URL)) {
-                    try {
-                        url = new URL(url);
-                    }
-                    catch(err) {
-                        // console.warn(err);
-                        return false;
-                    }
-                }
-                url = `${url.protocol}//${url.hostname}${url.pathname}${url.search}`;
                 return pattern.test(url);
             default:
                 throw new TypeError('URLMatchPattern.test requires 1 or 2 arguments');
@@ -123,6 +113,15 @@ class URLMatchPattern {
     }
 
     test(url) {
+        if(!(url instanceof URL)) {
+            try {
+                url = new URL(url);
+            }
+            catch(e) {
+                return false;
+            }
+        }
+        url = `${url.protocol}//${url.hostname}${url.pathname}${url.search}`;
         return this.#regExp.test(url);
     }
 }
