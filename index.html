@@ -6,8 +6,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>URL Match Pattern</title>
     <script src="./index.js"></script>
+    <style type="text/css">
+        ol {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+    <script>
+        const d = document;
+        const qs = d.querySelector.bind(d);
+        const qsa = d.querySelectorAll.bind(d);
+        document.addEventListener("DOMContentLoaded", () => {
+            /// remove text nodes between list items
+            qsa("ol, ul").forEach(list => {
+                Array.from(list.childNodes).forEach(child => {
+                    if(child.nodeType !== Node.ELEMENT_NODE) child.remove();
+                });
+            });
+            qs("#patternList").childNodes.forEach((item, index) => {
+                if(item.nodeType != 1) return;
+                item.style.marginLeft = (index + 1) + "em";
+
+            });
+        });
+    </script>
 </head>
 <body>
-
+    <h1>URL Match Pattern</h1>
+    <ol id="patternList">
+        <li><input></li>
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ol>
+    <table>
+        <thead></thead>
+        <tbody></tbody>
+    </table>
+    <ol id="urlList">
+        <li></li>
+        <li></li>
+        <li></li>
+        <li></li>
+    </ol>
 </body>
 </html>
