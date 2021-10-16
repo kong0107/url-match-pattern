@@ -5,7 +5,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>URL Match Pattern</title>
-    <script src="./index.js"></script>
+    <script src="./index.js" defer="true"></script>
+    <script src="./index.html.js" defer="true"></script>
     <style type="text/css">
         dt {
             float: left;
@@ -30,30 +31,6 @@
             clear: both;
         }
     </style>
-    <script>
-        const g = document.getElementById.bind(document);
-        function main() {
-            let pattern;
-            try {
-                pattern = new URLMatchPattern(g("pattern").value);
-                g("pattern-analysis").textContent = "RegExp: " + pattern.toRegExp().toString();
-            }
-            catch(e) { g("pattern-analysis").textContent = "invalid pattern"; }
-
-            try {
-                const url = new URL(g("url").value);
-                if(!pattern) return;
-                g("match-result").textContent = pattern.test(url) ? "matched" : "not matched";
-            }
-            catch(e) { g("match-result").textContent = "invalid url"; }
-        }
-
-        document.addEventListener("DOMContentLoaded", () => {
-            main();
-            g("pattern").addEventListener("input", main);
-            g("url").addEventListener("input", main);
-        });
-    </script>
 </head>
 <body>
     <h1>URL Match Pattern</h1>
